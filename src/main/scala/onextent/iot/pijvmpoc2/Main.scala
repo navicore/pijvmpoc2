@@ -1,19 +1,24 @@
 package onextent.iot.pijvmpoc2
 
-import onextent.iot.pijvmpoc2.io._
+import akka.Done
+import com.typesafe.scalalogging.LazyLogging
 import onextent.iot.pijvmpoc2.streams.TempAndHumidityReporter
 
-object Main {
+import scala.concurrent.Future
+import scala.util.{Failure, Success}
+
+object Main extends LazyLogging {
 
   def main(args: Array[String]): Unit = {
 
     println("starting...")
 
-    //GpioBlinkExample()
+    val done: Future[Done] = TempAndHumidityReporter()
 
-    PwmLedExample()
-
-    //TempAndHumidityReporter()
+    done onComplete {
+      case Success(s) => logger.debug(s"stream got $s")
+      case Failure(e) => logger.error(s"stream got $e")
+    }
 
   }
 

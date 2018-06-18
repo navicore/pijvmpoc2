@@ -6,8 +6,6 @@ object PwmLedExample {
 
   def apply(): Unit = {
 
-    println("pwm demo starting")
-
     GpioFactory.setDefaultProvider(new RaspiGpioProvider(RaspiPinNumberingScheme.BROADCOM_PIN_NUMBERING))
 
     val gpio: GpioController = GpioFactory.getInstance()
@@ -32,7 +30,6 @@ object PwmLedExample {
 
     pwm.setPwm(0)
     gpio.shutdown()
-    println("pwm demo complete")
 
   }
 }

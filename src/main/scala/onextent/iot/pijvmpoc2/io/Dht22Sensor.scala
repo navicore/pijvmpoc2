@@ -8,6 +8,8 @@ object Dht22Sensor {
 
   def apply(pin: Int): Option[TempReading] = {
 
+    PwmLedExample()
+
     val dht22 = new Dht22
 
     val reading = dht22.get(pin)
