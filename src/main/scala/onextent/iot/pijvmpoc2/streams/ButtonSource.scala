@@ -9,7 +9,8 @@ import com.typesafe.scalalogging.LazyLogging
 import onextent.iot.pijvmpoc2.models._
 
 class ButtonSource(buttonPin: Int, tempPin: Int)(implicit system: ActorSystem)
-    extends GraphStage[SourceShape[(Int, Command)]] with LazyLogging {
+    extends GraphStage[SourceShape[(Int, Command)]]
+    with LazyLogging {
 
   val out: Outlet[(Int, Command)] = Outlet("CommandSource")
 
@@ -17,29 +18,34 @@ class ButtonSource(buttonPin: Int, tempPin: Int)(implicit system: ActorSystem)
 
   override def createLogic(inheritedAttributes: Attributes): GraphStageLogic = {
 
-    val bQueue = new ArrayBlockingQueue[ReadCommand](1)
+    synchronized {
 
-    val monitor = new Runnable {
-      override def run(): Unit = {
-        Thread.sleep(1000 * 3)
-        logger.warn("ejs monitoring button....")
-        //todo: read from gpio
-        bQueue.put(ReadCommand())
-      }
-    }
+      val bQueue = new ArrayBlockingQueue[ReadCommand](1)
 
-    new Thread(monitor).start()
-
-    new GraphStageLogic(shape) {
-
-      setHandler(
-        out,
-        new OutHandler {
-          override def onPull(): Unit =
-            push(out, (tempPin, bQueue.take()))
+      val monitor = new Runnable {
+        override def run(): Unit = {
+          Thread.sleep(1000 * 3)
+          logger.warn("ejs monitoring button....")
+          //todo: read from gpio
+          bQueue.put(ReadCommand())
         }
-      )
+      }
+
+      new Thread(monitor).start()
+
+      new GraphStageLogic(shape) {
+
+        setHandler(
+          out,
+          new OutHandler {
+            override def onPull(): Unit =
+              push(out, (tempPin, bQueue.take()))
+          }
+        )
+      }
+
     }
+
   }
 
 }
