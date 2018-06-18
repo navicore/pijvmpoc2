@@ -7,6 +7,8 @@ import akka.stream.{ActorMaterializer, ActorMaterializerSettings, Supervision}
 import com.typesafe.config.{Config, ConfigFactory}
 import com.typesafe.scalalogging.LazyLogging
 
+import scala.concurrent.duration._
+
 object Conf extends LazyLogging {
 
   val conf: Config = ConfigFactory.load()
@@ -42,6 +44,7 @@ object Conf extends LazyLogging {
   val mqttClientId: String = conf.getString("mqtt.clientId")
 
   val deviceId: String = conf.getString("main.deviceId")
+  val intervalSeconds: FiniteDuration = Duration(conf.getInt("main.intervalSeconds"), SECONDS)
 
 }
 
