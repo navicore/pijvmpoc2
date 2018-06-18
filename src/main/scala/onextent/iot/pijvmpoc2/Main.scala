@@ -17,8 +17,8 @@ object Main extends LazyLogging {
     val done: Future[Done] = TempAndHumidityReporter()
 
     done onComplete {
-      case Success(s) => logger.debug(s"stream got $s")
-      case Failure(e) => logger.error(s"stream got $e")
+      case Success(s) => logger.debug(s"stream processing complete: $s")
+      case Failure(e) => logger.error(s"stream failed on $e")
     }
 
   }
