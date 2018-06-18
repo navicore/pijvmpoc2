@@ -4,17 +4,13 @@ import com.pi4j.io.gpio._
 
 object PwmLedExample {
 
+  GpioFactory.setDefaultProvider(new RaspiGpioProvider(RaspiPinNumberingScheme.BROADCOM_PIN_NUMBERING))
+  val gpio: GpioController = GpioFactory.getInstance()
+  val pin: Pin = RaspiBcmPin.GPIO_18
+  val pwm: GpioPinPwmOutput = gpio.provisionPwmOutputPin(pin)
+  pwm.setPwmRange(100)
+
   def apply(): Unit = {
-
-    GpioFactory.setDefaultProvider(new RaspiGpioProvider(RaspiPinNumberingScheme.BROADCOM_PIN_NUMBERING))
-
-    val gpio: GpioController = GpioFactory.getInstance()
-
-    val pin: Pin = RaspiBcmPin.GPIO_18
-
-    val pwm = gpio.provisionPwmOutputPin(pin)
-    
-    pwm.setPwmRange(100)
 
     pwm.setPwm(0)
 
