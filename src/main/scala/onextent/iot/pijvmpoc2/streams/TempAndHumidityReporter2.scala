@@ -3,7 +3,7 @@ package onextent.iot.pijvmpoc2.streams
 import akka.stream._
 import akka.stream.alpakka.mqtt.scaladsl.MqttSink
 import akka.stream.alpakka.mqtt.{MqttConnectionSettings, MqttMessage, MqttQoS}
-import akka.stream.scaladsl.{Flow, Source}
+import akka.stream.scaladsl.{Flow, Merge, Source}
 import akka.util.ByteString
 import akka.{Done, NotUsed}
 import com.typesafe.scalalogging.LazyLogging
@@ -41,9 +41,6 @@ object TempAndHumidityReporter2 extends LazyLogging {
   val sinkSettings: MqttConnectionSettings =
     connectionSettings.withClientId(clientId = mqttClientId)
 
-  def read() =
-    (r: (Int, Command)) => (r._1, Dht22Sensor(r._1))
-
   def apply(): Future[Done] = {
 
     //todo: refactor:
@@ -57,11 +54,14 @@ object TempAndHumidityReporter2 extends LazyLogging {
     // pass to mqttReadings
     // sink to mqttSink
 
+    def read() =
+      (r: (Int, Command)) => (r._1, Dht22Sensor(r._1))
+
     // read port 4 every n seconds
     val s1 = Source.fromGraph(new CommandSource(4)).via(throttlingFlow).map(read())
 
-    //todo: make s2 be via button
-    //val s2 = Source.fromGraph(new Dht22SensorSource(22)).via(throttlingFlow)
+    // read temp port 4 when button is pressed
+    val s2 = Source.fromGraph(new ButtonSource(17, 4)).via(throttlingFlow).map(read())
 
     val mqttSink = MqttSink(sinkSettings, MqttQoS.atLeastOnce)
 
@@ -83,8 +83,8 @@ object TempAndHumidityReporter2 extends LazyLogging {
                     retained = true)
 
     Source
-      .fromGraph(s1)
-      //.combine(s1, s2)(Merge(_))
+      //.fromGraph(s1)
+      .combine(s1, s2)(Merge(_))
       .mapConcat(tempReadings())
       .map(mqttReading())
       .runWith(mqttSink)
