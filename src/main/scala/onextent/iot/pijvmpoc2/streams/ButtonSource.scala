@@ -5,10 +5,11 @@ import java.util.concurrent.ArrayBlockingQueue
 import akka.actor.ActorSystem
 import akka.stream.stage.{GraphStage, GraphStageLogic, OutHandler}
 import akka.stream.{Attributes, Outlet, SourceShape}
+import com.typesafe.scalalogging.LazyLogging
 import onextent.iot.pijvmpoc2.models._
 
 class ButtonSource(buttonPin: Int, tempPin: Int)(implicit system: ActorSystem)
-    extends GraphStage[SourceShape[(Int, Command)]] {
+    extends GraphStage[SourceShape[(Int, Command)]] with LazyLogging {
 
   val out: Outlet[(Int, Command)] = Outlet("CommandSource")
 
@@ -21,6 +22,7 @@ class ButtonSource(buttonPin: Int, tempPin: Int)(implicit system: ActorSystem)
     val monitor = new Runnable {
       override def run(): Unit = {
         Thread.sleep(1000 * 3)
+        logger.warn("ejs monitoring button....")
         //todo: read from gpio
         bQueue.put(ReadCommand())
       }
