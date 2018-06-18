@@ -3,7 +3,7 @@ package onextent.iot.pijvmpoc2
 import scala.concurrent.ExecutionContext.Implicits.global
 import akka.Done
 import com.typesafe.scalalogging.LazyLogging
-import onextent.iot.pijvmpoc2.streams.TempAndHumidityReporter
+import onextent.iot.pijvmpoc2.streams._
 
 import scala.concurrent.Future
 import scala.util.{Failure, Success}
@@ -14,7 +14,7 @@ object Main extends LazyLogging {
 
     println("starting...")
 
-    val done: Future[Done] = TempAndHumidityReporter()
+    val done: Future[Done] = TempAndHumidityReporter2()
 
     done onComplete {
       case Success(s) => logger.debug(s"stream processing complete: $s")
