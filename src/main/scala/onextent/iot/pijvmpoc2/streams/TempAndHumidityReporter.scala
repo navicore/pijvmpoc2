@@ -66,7 +66,7 @@ object TempAndHumidityReporter extends LazyLogging {
       (t: (Int, Option[TempReading])) => {
         t._2 match {
           case Some(reading) =>
-            List(TempReport(Some(s"navisensor-${t._1}"), reading))
+            List(TempReport(Some(s"$deviceId-temp-${t._1}"), reading))
           case _ =>
             List()
         }

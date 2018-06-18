@@ -41,5 +41,7 @@ object Conf extends LazyLogging {
   val mqttTopic: String = conf.getString("mqtt.topic")
   val mqttClientId: String = conf.getString("mqtt.clientId")
 
+  val deviceId: String = conf.getString("main.deviceId")
+
 }
 
