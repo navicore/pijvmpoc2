@@ -1,5 +1,6 @@
 package onextent.iot.pijvmpoc2
 
+import scala.concurrent.ExecutionContext.Implicits.global
 import akka.Done
 import com.typesafe.scalalogging.LazyLogging
 import onextent.iot.pijvmpoc2.streams.TempAndHumidityReporter

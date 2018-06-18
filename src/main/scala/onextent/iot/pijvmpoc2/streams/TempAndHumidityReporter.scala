@@ -58,7 +58,7 @@ object TempAndHumidityReporter extends LazyLogging {
     val s1 = Source.fromGraph(new Dht22SensorSource(4)).via(throttlingFlow)
 
     //todo: make s2 be via button
-    val s2 = Source.fromGraph(new Dht22SensorSource(22)).via(throttlingFlow)
+    //val s2 = Source.fromGraph(new Dht22SensorSource(22)).via(throttlingFlow)
 
     val mqttSink = MqttSink(sinkSettings, MqttQoS.atLeastOnce)
 
@@ -80,7 +80,8 @@ object TempAndHumidityReporter extends LazyLogging {
                     retained = true)
 
     Source
-      .combine(s1, s2)(Merge(_))
+      .fromGraph(s1)
+      //.combine(s1, s2)(Merge(_))
       .mapConcat(tempReadings())
       .map(mqttReading())
       .runWith(mqttSink)
