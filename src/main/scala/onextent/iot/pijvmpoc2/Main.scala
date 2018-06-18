@@ -9,11 +9,11 @@ object Main {
 
     println("starting...")
 
-    GpioBlinkExample()
+    //GpioBlinkExample()
 
     PwmLedExample()
 
-    TempAndHumidityReporter()
+    //TempAndHumidityReporter()
 
   }
 

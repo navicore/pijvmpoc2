@@ -29,7 +29,7 @@ libraryDependencies ++= Seq(
 
 )
 
-mainClass in assembly := Some("onextent.iot.pijvmpoc.Main")
+mainClass in assembly := Some("onextent.iot.pijvmpoc2.Main")
 assemblyJarName in assembly := "PiJvmPoc2.jar"
 
 assemblyMergeStrategy in assembly := {
