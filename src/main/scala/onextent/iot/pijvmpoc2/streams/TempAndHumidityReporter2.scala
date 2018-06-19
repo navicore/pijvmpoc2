@@ -84,6 +84,7 @@ object TempAndHumidityReporter2 extends LazyLogging {
 
     Source
       .combine(s1, s2)(Merge(_))
+      .fromGraph(s1)
       .map(read())
       .mapConcat(tempReadings())
       .map(mqttReading())
