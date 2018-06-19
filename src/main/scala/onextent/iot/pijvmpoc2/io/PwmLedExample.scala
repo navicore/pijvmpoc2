@@ -4,7 +4,6 @@ import com.pi4j.io.gpio._
 
 object PwmLedExample {
 
-  GpioFactory.setDefaultProvider(new RaspiGpioProvider(RaspiPinNumberingScheme.BROADCOM_PIN_NUMBERING))
   val gpio: GpioController = GpioFactory.getInstance()
   val pin: Pin = RaspiBcmPin.GPIO_18
   val pwm: GpioPinPwmOutput = gpio.provisionPwmOutputPin(pin)
@@ -25,7 +24,6 @@ object PwmLedExample {
     }
 
     pwm.setPwm(0)
-    gpio.shutdown()
 
   }
 }

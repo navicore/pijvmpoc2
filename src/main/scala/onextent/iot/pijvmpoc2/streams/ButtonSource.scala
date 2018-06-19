@@ -5,10 +5,12 @@ import java.util.concurrent.ArrayBlockingQueue
 import akka.actor.ActorSystem
 import akka.stream.stage.{GraphStage, GraphStageLogic, OutHandler}
 import akka.stream.{Attributes, Outlet, SourceShape}
+import com.pi4j.io.gpio._
+import com.pi4j.io.gpio.event.{GpioPinDigitalStateChangeEvent, GpioPinListenerDigital}
 import com.typesafe.scalalogging.LazyLogging
 import onextent.iot.pijvmpoc2.models._
 
-class ButtonSource(buttonPin: Int, tempPin: Int)(implicit system: ActorSystem)
+class ButtonSource(buttonPin: Pin, tempPin: Int)(implicit system: ActorSystem)
     extends GraphStage[SourceShape[(Int, Command)]]
     with LazyLogging {
 
@@ -18,32 +20,41 @@ class ButtonSource(buttonPin: Int, tempPin: Int)(implicit system: ActorSystem)
 
   override def createLogic(inheritedAttributes: Attributes): GraphStageLogic = {
 
-    synchronized {
+    val bQueue = new ArrayBlockingQueue[ReadCommand](1)
+    val gpio: GpioController = GpioFactory.getInstance
 
-      val bQueue = new ArrayBlockingQueue[ReadCommand](1)
+    val myButton: GpioPinDigitalInput =
+      gpio.provisionDigitalInputPin(buttonPin, PinPullResistance.PULL_DOWN)
 
-      val monitor = new Runnable {
-        override def run(): Unit = {
-          Thread.sleep(1000 * 3)
-          logger.warn("ejs monitoring button....")
-          //todo: read from gpio
-          bQueue.put(ReadCommand())
-        }
-      }
-
-      new Thread(monitor).start()
-
-      new GraphStageLogic(shape) {
-
-        setHandler(
-          out,
-          new OutHandler {
-            override def onPull(): Unit =
-              push(out, (tempPin, bQueue.take()))
+    myButton.addListener(new GpioPinListenerDigital() {
+      override def handleGpioPinDigitalStateChangeEvent(
+          event: GpioPinDigitalStateChangeEvent): Unit = {
+        if (event.getState == PinState.LOW)
+          try {
+            bQueue.offer(ReadCommand(), 100, java.util.concurrent.TimeUnit.DAYS)
+          } catch {
+            case e: Throwable => logger.warn(s"offer: $e")
           }
-        )
-      }
 
+      }
+    })
+
+    new GraphStageLogic(shape) {
+
+      setHandler(
+        out,
+        new OutHandler {
+          override def onPull(): Unit = {
+            try {
+              push(
+                out,
+                (tempPin, bQueue.poll(100, java.util.concurrent.TimeUnit.DAYS)))
+            } catch {
+              case e: Throwable => logger.warn(s"poll: $e")
+            }
+          }
+        }
+      )
     }
 
   }
