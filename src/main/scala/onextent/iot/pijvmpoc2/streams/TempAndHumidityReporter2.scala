@@ -3,7 +3,7 @@ package onextent.iot.pijvmpoc2.streams
 import akka.stream._
 import akka.stream.alpakka.mqtt.scaladsl.MqttSink
 import akka.stream.alpakka.mqtt.{MqttConnectionSettings, MqttMessage, MqttQoS}
-import akka.stream.scaladsl.{Flow, Merge, Source}
+import akka.stream.scaladsl._
 import akka.util.ByteString
 import akka.{Done, NotUsed}
 import com.pi4j.io.gpio.RaspiBcmPin
@@ -61,7 +61,7 @@ object TempAndHumidityReporter2 extends LazyLogging {
     // ... but they work perfectly by themselves
 
     // read temp port 4 when button is pressed
-    //val s2 = Source.fromGraph(new ButtonSource(RaspiBcmPin.GPIO_02, 4))
+    val s2 = Source.fromGraph(new ButtonSource(RaspiBcmPin.GPIO_02, 4))
 
     val mqttSink = MqttSink(sinkSettings, MqttQoS.atLeastOnce)
 
@@ -83,8 +83,11 @@ object TempAndHumidityReporter2 extends LazyLogging {
                     retained = true)
 
     Source
-      .fromGraph(s1)
+      //.fromGraph(s1)
       //.combine(s1, s2)(Merge(_))
+      //.combine(s1, s2)(MergePrioritized(_))
+      //.combine(s1, s2)((x: Int) => Merge(x, eagerComplete = true))
+      .combine(s1, s2)((x: Int) => MergePreferred(x - 1, eagerComplete = true))
       .map(read())
       .mapConcat(tempReadings())
       .map(mqttReading())
