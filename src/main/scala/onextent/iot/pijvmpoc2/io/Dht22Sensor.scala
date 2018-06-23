@@ -8,16 +8,19 @@ object Dht22Sensor {
 
   def apply(pin: Int): Option[TempReading] = {
 
-    PwmLedExample()
+    synchronized {
 
-    val dht22 = new Dht22
+      PwmLedExample()
 
-    val reading = dht22.get(pin)
+      val dht22 = new Dht22
 
-    if (reading(0) > 0 && reading(2) > 0) {
-      Some(TempReading(Some(reading(2).toDouble), Some(reading(0).toDouble)))
-    } else {
-      None
+      val reading = dht22.get(pin)
+
+      if (reading(0) > 0 && reading(2) > 0) {
+        Some(TempReading(Some(reading(2).toDouble), Some(reading(0).toDouble)))
+      } else {
+        None
+      }
     }
 
   }

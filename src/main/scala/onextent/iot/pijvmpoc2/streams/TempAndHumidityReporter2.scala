@@ -1,5 +1,6 @@
 package onextent.iot.pijvmpoc2.streams
 
+import akka.actor.ActorSystem
 import akka.stream._
 import akka.stream.alpakka.mqtt.scaladsl.MqttSink
 import akka.stream.alpakka.mqtt.{MqttConnectionSettings, MqttMessage, MqttQoS}
@@ -24,8 +25,17 @@ import scala.concurrent.duration._
   */
 object TempAndHumidityReporter2 extends LazyLogging {
 
-  def throttlingFlow[T]
-    : Flow[T, T, NotUsed] =
+  def createToConsumer(consumer: Sink[MqttMessage, Future[Done]])(
+      implicit s: ActorSystem,
+      m: Materializer): Sink[MqttMessage, NotUsed] = {
+    val runnableGraph: RunnableGraph[Sink[MqttMessage, NotUsed]] =
+      MergeHub
+        .source[MqttMessage](perProducerBufferSize = 16)
+        .to(consumer)
+    runnableGraph.run()
+  }
+
+  def throttlingFlow[T]: Flow[T, T, NotUsed] =
     Flow[T].throttle(
       elements = 1,
       //per = intervalSeconds,
@@ -44,26 +54,11 @@ object TempAndHumidityReporter2 extends LazyLogging {
   val sinkSettings: MqttConnectionSettings =
     connectionSettings.withClientId(clientId = mqttClientId)
 
-  def apply(): Future[Done] = {
+  //def apply(): Future[Done] = {
+  def apply(): NotUsed = {
 
     def read() =
       (r: (Int, Command)) => (r._1, Dht22Sensor(r._1))
-
-    // read port 4 every n seconds
-    val s1 = Source.fromGraph(new CommandSource(4)).via(throttlingFlow)
-
-    // BUG! when both s1 and s2 are wired s1 doesn't work
-    // BUG! when both s1 and s2 are wired s1 doesn't work
-    // BUG! when both s1 and s2 are wired s1 doesn't work
-    // BUG! when both s1 and s2 are wired s1 doesn't work
-    // BUG! when both s1 and s2 are wired s1 doesn't work
-    // BUG! when both s1 and s2 are wired s1 doesn't work
-    // ... but they work perfectly by themselves
-
-    // read temp port 4 when button is pressed
-    val s2 = Source.fromGraph(new ButtonSource(RaspiBcmPin.GPIO_02, 4))
-
-    val mqttSink = MqttSink(sinkSettings, MqttQoS.atLeastOnce)
 
     def tempReadings() =
       (t: (Int, Option[TempReading])) => {
@@ -75,6 +70,15 @@ object TempAndHumidityReporter2 extends LazyLogging {
         }
       }
 
+    // read port 4 every n seconds
+    val s1 = Source.fromGraph(new CommandSource(4)).via(throttlingFlow)
+
+    // read temp port 4 when button is pressed
+    val s2 = Source.fromGraph(new ButtonSource(RaspiBcmPin.GPIO_02, 4))
+
+    val toConsumer = createToConsumer(
+      MqttSink(sinkSettings, MqttQoS.atLeastOnce))
+
     def mqttReading() =
       (r: TempReport) =>
         MqttMessage(mqttTopic,
@@ -83,16 +87,18 @@ object TempAndHumidityReporter2 extends LazyLogging {
                     retained = true)
 
     Source
-      //.fromGraph(s1)
-      //.combine(s1, s2)(Merge(_))
-      //.combine(s1, s2)(MergePrioritized(_))
-      //.combine(s1, s2)((x: Int) => Merge(x, eagerComplete = true))
-      .combine(s1, s2)((x: Int) => MergePreferred(x - 1, eagerComplete = true))
+      .fromGraph(s1)
       .map(read())
       .mapConcat(tempReadings())
       .map(mqttReading())
-      .runWith(mqttSink)
+      .runWith(toConsumer)
 
+    Source
+      .fromGraph(s2)
+      .map(read())
+      .mapConcat(tempReadings())
+      .map(mqttReading())
+      .runWith(toConsumer)
   }
 
 }
