@@ -26,20 +26,24 @@ object SR04Sensor extends LazyLogging {
 
       triggerOuptut.low() //Make trigger pin LOW
 
+      logger.debug("ejs 1")
       while ({
         triggerOuptut.isLow
       }) {
         //Wait until the ECHO pin gets HIGH
       }
       val startTime = System.nanoTime // Store the surrent time to calculate ECHO pin HIGH time.
+      logger.debug("ejs 2")
       while ({
         echoInput.isHigh
       }) {
         //Wait until the ECHO pin gets LOW
       }
+      logger.debug("ejs 3")
       val endTime = System.nanoTime // Store the echo pin HIGH end time to calculate ECHO pin HIGH time.
       val result: Double = (((endTime - startTime) / 1e3) / 2) / 29.1
 
+      logger.debug(s"... distance by sensor echo $echoPin and trig $trigPin was $result")
       Some(UltraSonicReading(Some(result)))
 
     } catch {
