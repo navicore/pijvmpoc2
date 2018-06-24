@@ -9,11 +9,12 @@ import akka.util.ByteString
 import akka.{Done, NotUsed}
 import com.pi4j.io.gpio.RaspiBcmPin
 import com.typesafe.scalalogging.LazyLogging
+import io.circe.Encoder
 import io.circe.generic.auto._
 import io.circe.syntax._
 import onextent.iot.pijvmpoc2.Conf._
-import onextent.iot.pijvmpoc2.io.Dht22Sensor
-import onextent.iot.pijvmpoc2.models.{Command, TempReading, TempReport}
+import onextent.iot.pijvmpoc2.io.{Dht22Sensor, SR04Sensor}
+import onextent.iot.pijvmpoc2.models._
 import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence
 
 import scala.concurrent.Future
@@ -55,16 +56,29 @@ object TempAndHumidityReporter2 extends LazyLogging {
 
   def apply(): NotUsed = {
 
+    def measureDistance() =
+      (r: (Int, Command)) => (r._1, SR04Sensor())
+
     def read() =
       (r: (Int, Command)) => (r._1, Dht22Sensor(r._1))
 
-    def tempReadings() =
+    def distReadings() =
+      (t: (Int, Option[UltraSonicReading])) => {
+        t._2 match {
+          case Some(reading) =>
+            List(UltraSonicReport(Some(s"$deviceId-temp-${t._1}"), reading))
+          case _ =>
+            logger.warn(s"empty ultrasonic reading")
+            List()
+        }
+      }
+    def tempReadings =
       (t: (Int, Option[TempReading])) => {
         t._2 match {
           case Some(reading) =>
             List(TempReport(Some(s"$deviceId-temp-${t._1}"), reading))
           case _ =>
-            logger.warn(s"empty reading")
+            logger.warn(s"empty temp reading")
             List()
         }
       }
@@ -75,35 +89,57 @@ object TempAndHumidityReporter2 extends LazyLogging {
     // read temp port 4 when button is pressed
     val s2 = Source.fromGraph(new ButtonSource(RaspiBcmPin.GPIO_02, 4))
 
+    val s3 = Source.fromGraph(new CommandSource(21)).via(throttlingFlow)
+
     val toConsumer = createToConsumer(
       MqttSink(sinkSettings, MqttQoS.atLeastOnce))
 
-    def mqttReading() =
-      (r: TempReport) =>
+    def mqttReading[T](implicit ioc: Encoder[T]) =
+      (r: T) =>
         MqttMessage(mqttTopic,
                     ByteString(r.asJson.noSpaces),
                     Some(MqttQoS.AtLeastOnce),
                     retained = true)
 
-    RestartSource.withBackoff(minBackoff = 1 second,maxBackoff = 10 seconds,randomFactor = 0.2) { () =>
-      s1
-    }
-    //Source
-    //  .fromGraph(s1)
+    RestartSource
+      .withBackoff(minBackoff = 1 second,
+                   maxBackoff = 10 seconds,
+                   randomFactor = 0.2) { () =>
+        s1
+      }
+      //Source
+      //  .fromGraph(s1)
       .map(read())
-      .mapConcat(tempReadings())
-      .map(mqttReading())
+      .mapConcat(tempReadings)
+      .map(mqttReading[TempReport])
       .runWith(toConsumer)
 
-    RestartSource.withBackoff(minBackoff = 1 second,maxBackoff = 10 seconds,randomFactor = 0.2) { () =>
-      s2
-    }
-    //Source
-    //  .fromGraph(s2)
+    RestartSource
+      .withBackoff(minBackoff = 1 second,
+                   maxBackoff = 10 seconds,
+                   randomFactor = 0.2) { () =>
+        s2
+      }
+      //Source
+      //  .fromGraph(s2)
       .map(read())
-      .mapConcat(tempReadings())
-      .map(mqttReading())
+      .mapConcat(tempReadings)
+      .map(mqttReading[TempReport])
       .runWith(toConsumer)
+
+    RestartSource
+      .withBackoff(minBackoff = 1 second,
+                   maxBackoff = 10 seconds,
+                   randomFactor = 0.2) { () =>
+        s3
+      }
+      //Source
+      //  .fromGraph(s2)
+      .map(measureDistance())
+      .mapConcat(distReadings())
+      .map(mqttReading[UltraSonicReport])
+      .runWith(toConsumer)
+
   }
 
 }

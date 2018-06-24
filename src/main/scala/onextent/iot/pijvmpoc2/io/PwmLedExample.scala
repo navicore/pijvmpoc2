@@ -5,6 +5,7 @@ import com.pi4j.io.gpio._
 object PwmLedExample {
 
   val gpio: GpioController = GpioFactory.getInstance()
+
   val pin: Pin = RaspiBcmPin.GPIO_18
   val pwm: GpioPinPwmOutput = gpio.provisionPwmOutputPin(pin)
   pwm.setPwmRange(100)
@@ -26,4 +27,5 @@ object PwmLedExample {
     pwm.setPwm(0)
 
   }
+
 }
