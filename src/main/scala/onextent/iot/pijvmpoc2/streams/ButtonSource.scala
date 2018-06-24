@@ -31,6 +31,7 @@ class ButtonSource(buttonPin: Pin, tempPin: Int)(implicit system: ActorSystem)
           event: GpioPinDigitalStateChangeEvent): Unit = {
         if (event.getState == PinState.LOW)
           try {
+            logger.debug(s"button $buttonPin pressed")
             bQueue.offer(ReadCommand(), 100, java.util.concurrent.TimeUnit.DAYS)
           } catch {
             case e: Throwable => logger.warn(s"offer: $e")
