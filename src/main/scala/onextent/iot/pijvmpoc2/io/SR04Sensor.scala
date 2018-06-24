@@ -9,10 +9,10 @@ object SR04Sensor extends LazyLogging {
   val gpio: GpioController = GpioFactory.getInstance()
 
   val trigPin: Pin = RaspiBcmPin.GPIO_20
-  val triggerOuptut: GpioPinDigitalOutput = gpio.provisionDigitalOutputPin(trigPin)
+  val sensorTriggerPin: GpioPinDigitalOutput = gpio.provisionDigitalOutputPin(trigPin)
 
   val echoPin: Pin = RaspiBcmPin.GPIO_21
-  val echoInput: GpioPinDigitalInput =
+  val sensorEchoPin: GpioPinDigitalInput =
     gpio.provisionDigitalInputPin(echoPin, PinPullResistance.PULL_DOWN)
 
   def apply(): Option[UltraSonicReading] = {
@@ -20,22 +20,22 @@ object SR04Sensor extends LazyLogging {
     logger.debug(s"measure distance with sensor echo $echoPin and trig $trigPin")
 
     try {
-      triggerOuptut.high() // Make trigger pin HIGH
+      sensorTriggerPin.high() // Make trigger pin HIGH
 
       Thread.sleep(0.01.toLong) // Delay for 10 microseconds
 
-      triggerOuptut.low() //Make trigger pin LOW
+      sensorTriggerPin.low() //Make trigger pin LOW
 
       logger.debug("ejs 1") // ejs this is the last log msg!!!!!!!!!!!!!!!!!!!!!!!
       while ({
-        echoInput.isLow
+        sensorEchoPin.isLow
       }) {
         //Wait until the ECHO pin gets HIGH
       }
       val startTime = System.nanoTime // Store the surrent time to calculate ECHO pin HIGH time.
       logger.debug("ejs 2")
       while ({
-        echoInput.isHigh
+        sensorEchoPin.isHigh
       }) {
         //Wait until the ECHO pin gets LOW
       }
