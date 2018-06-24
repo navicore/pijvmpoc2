@@ -20,7 +20,7 @@ class CommandSource(pin: Int)(implicit system: ActorSystem)
         out,
         new OutHandler {
           override def onPull(): Unit = {
-            logger.debug(s"command source onPull")
+            logger.debug(s"command source for pin $pin onPull")
             push(out, (pin, ReadCommand()))
           }
         }

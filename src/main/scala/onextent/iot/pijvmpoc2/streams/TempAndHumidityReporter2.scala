@@ -38,8 +38,7 @@ object TempAndHumidityReporter2 extends LazyLogging {
   def throttlingFlow[T]: Flow[T, T, NotUsed] =
     Flow[T].throttle(
       elements = 1,
-      //per = intervalSeconds,
-      per = 30.seconds,
+      per = intervalSeconds,
       maximumBurst = 0,
       mode = ThrottleMode.Shaping
     )
@@ -54,7 +53,6 @@ object TempAndHumidityReporter2 extends LazyLogging {
   val sinkSettings: MqttConnectionSettings =
     connectionSettings.withClientId(clientId = mqttClientId)
 
-  //def apply(): Future[Done] = {
   def apply(): NotUsed = {
 
     def read() =
@@ -66,6 +64,7 @@ object TempAndHumidityReporter2 extends LazyLogging {
           case Some(reading) =>
             List(TempReport(Some(s"$deviceId-temp-${t._1}"), reading))
           case _ =>
+            logger.warn(s"empty reading")
             List()
         }
       }

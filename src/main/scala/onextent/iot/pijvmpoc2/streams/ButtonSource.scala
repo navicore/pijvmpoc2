@@ -14,7 +14,7 @@ class ButtonSource(buttonPin: Pin, tempPin: Int)(implicit system: ActorSystem)
     extends GraphStage[SourceShape[(Int, Command)]]
     with LazyLogging {
 
-  val out: Outlet[(Int, Command)] = Outlet("CommandSource")
+  val out: Outlet[(Int, Command)] = Outlet("ButtonSource")
 
   override val shape: SourceShape[(Int, Command)] = SourceShape(out)
 
@@ -46,7 +46,7 @@ class ButtonSource(buttonPin: Pin, tempPin: Int)(implicit system: ActorSystem)
         out,
         new OutHandler {
           override def onPull(): Unit = {
-            logger.debug(s"button onPull")
+            logger.debug(s"button $buttonPin onPull")
             try {
               push(
                 out,
