@@ -46,6 +46,7 @@ class ButtonSource(buttonPin: Pin, tempPin: Int)(implicit system: ActorSystem)
         out,
         new OutHandler {
           override def onPull(): Unit = {
+            logger.debug(s"button onPull")
             try {
               push(
                 out,

@@ -86,15 +86,21 @@ object TempAndHumidityReporter2 extends LazyLogging {
                     Some(MqttQoS.AtLeastOnce),
                     retained = true)
 
-    Source
-      .fromGraph(s1)
+    RestartSource.withBackoff(minBackoff = 1 second,maxBackoff = 30 seconds,randomFactor = 0.2) { () =>
+      s1
+    }
+    //Source
+    //  .fromGraph(s1)
       .map(read())
       .mapConcat(tempReadings())
       .map(mqttReading())
       .runWith(toConsumer)
 
-    Source
-      .fromGraph(s2)
+    RestartSource.withBackoff(minBackoff = 1 second,maxBackoff = 30 seconds,randomFactor = 0.2) { () =>
+      s2
+    }
+    //Source
+    //  .fromGraph(s2)
       .map(read())
       .mapConcat(tempReadings())
       .map(mqttReading())
