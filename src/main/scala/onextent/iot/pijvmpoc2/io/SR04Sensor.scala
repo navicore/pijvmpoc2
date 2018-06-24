@@ -26,9 +26,9 @@ object SR04Sensor extends LazyLogging {
 
       triggerOuptut.low() //Make trigger pin LOW
 
-      logger.debug("ejs 1")
+      logger.debug("ejs 1") // ejs this is the last log msg!!!!!!!!!!!!!!!!!!!!!!!
       while ({
-        triggerOuptut.isLow
+        echoInput.isLow
       }) {
         //Wait until the ECHO pin gets HIGH
       }
