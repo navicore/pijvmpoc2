@@ -43,7 +43,8 @@ object SR04Sensor extends LazyLogging {
       Some(UltraSonicReading(Some(result)))
 
     } catch {
-      case e: InterruptedException =>
+      //case e: InterruptedException =>
+      case e: Throwable =>
         logger.warn(s"$e", e)
         None
     }
