@@ -12,7 +12,7 @@ object Main extends LazyLogging {
 
   def main(args: Array[String]): Unit = {
 
-    println("starting...")
+    logger.info("starting...")
 
     TempAndHumidityReporter2()
 

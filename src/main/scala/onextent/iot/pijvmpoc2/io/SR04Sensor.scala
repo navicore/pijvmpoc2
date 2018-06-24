@@ -1,9 +1,10 @@
 package onextent.iot.pijvmpoc2.io
 
 import com.pi4j.io.gpio._
+import com.typesafe.scalalogging.LazyLogging
 import onextent.iot.pijvmpoc2.models.UltraSonicReading
 
-object SR04Sensor {
+object SR04Sensor extends LazyLogging {
 
   val gpio: GpioController = GpioFactory.getInstance()
 
@@ -15,6 +16,8 @@ object SR04Sensor {
     gpio.provisionDigitalInputPin(echoPin, PinPullResistance.PULL_DOWN)
 
   def apply(): Option[UltraSonicReading] = {
+
+    logger.debug(s"measure distance with sensor echo $echoPin and trig $trigPin")
 
     try {
       triggerOuptut.high() // Make trigger pin HIGH
@@ -41,9 +44,10 @@ object SR04Sensor {
 
     } catch {
       case e: InterruptedException =>
-        e.printStackTrace()
+        logger.warn(s"$e", e)
         None
     }
 
   }
+
 }

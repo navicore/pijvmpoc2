@@ -32,10 +32,10 @@ class ButtonSource(buttonPin: Pin, tempPin: Int)(implicit system: ActorSystem)
         if (event.getState == PinState.LOW)
           try {
             logger.debug(s"button $buttonPin pressed")
-            bQueue.offer(ReadCommand(), 100, java.util.concurrent.TimeUnit.DAYS)
+            bQueue.offer(ReadCommand(), 10, java.util.concurrent.TimeUnit.MINUTES)
             logger.debug(s"button $buttonPin offer accepted")
           } catch {
-            case e: Throwable => logger.warn(s"offer: $e")
+            case e: Throwable => logger.debug(s"offer: $e")
           }
 
       }
@@ -51,9 +51,9 @@ class ButtonSource(buttonPin: Pin, tempPin: Int)(implicit system: ActorSystem)
             try {
               push(
                 out,
-                (tempPin, bQueue.poll(100, java.util.concurrent.TimeUnit.DAYS)))
+                (tempPin, bQueue.poll(10, java.util.concurrent.TimeUnit.MINUTES)))
             } catch {
-              case e: Throwable => logger.warn(s"poll: $e")
+              case e: Throwable => logger.debug(s"poll: $e")
             }
           }
         }

@@ -72,6 +72,7 @@ object TempAndHumidityReporter2 extends LazyLogging {
             List()
         }
       }
+
     def tempReadings =
       (t: (Int, Option[TempReading])) => {
         t._2 match {
@@ -111,7 +112,7 @@ object TempAndHumidityReporter2 extends LazyLogging {
       //  .fromGraph(s1)
       .map(read())
       .mapConcat(tempReadings)
-      .map(mqttReading[TempReport])
+      .map(mqttReading)
       .runWith(toConsumer)
 
     RestartSource
@@ -124,7 +125,7 @@ object TempAndHumidityReporter2 extends LazyLogging {
       //  .fromGraph(s2)
       .map(read())
       .mapConcat(tempReadings)
-      .map(mqttReading[TempReport])
+      .map(mqttReading)
       .runWith(toConsumer)
 
     RestartSource
@@ -134,10 +135,10 @@ object TempAndHumidityReporter2 extends LazyLogging {
         s3
       }
       //Source
-      //  .fromGraph(s2)
+      //  .fromGraph(s3)
       .map(measureDistance())
       .mapConcat(distReadings())
-      .map(mqttReading[UltraSonicReport])
+      .map(mqttReading)
       .runWith(toConsumer)
 
   }
