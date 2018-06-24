@@ -33,6 +33,7 @@ class ButtonSource(buttonPin: Pin, tempPin: Int)(implicit system: ActorSystem)
           try {
             logger.debug(s"button $buttonPin pressed")
             bQueue.offer(ReadCommand(), 100, java.util.concurrent.TimeUnit.DAYS)
+            logger.debug(s"button $buttonPin offer accepted")
           } catch {
             case e: Throwable => logger.warn(s"offer: $e")
           }
