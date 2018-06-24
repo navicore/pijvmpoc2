@@ -86,7 +86,7 @@ object TempAndHumidityReporter2 extends LazyLogging {
                     Some(MqttQoS.AtLeastOnce),
                     retained = true)
 
-    RestartSource.withBackoff(minBackoff = 1 second,maxBackoff = 30 seconds,randomFactor = 0.2) { () =>
+    RestartSource.withBackoff(minBackoff = 1 second,maxBackoff = 10 seconds,randomFactor = 0.2) { () =>
       s1
     }
     //Source
@@ -96,7 +96,7 @@ object TempAndHumidityReporter2 extends LazyLogging {
       .map(mqttReading())
       .runWith(toConsumer)
 
-    RestartSource.withBackoff(minBackoff = 1 second,maxBackoff = 30 seconds,randomFactor = 0.2) { () =>
+    RestartSource.withBackoff(minBackoff = 1 second,maxBackoff = 10 seconds,randomFactor = 0.2) { () =>
       s2
     }
     //Source

@@ -3,10 +3,11 @@ package onextent.iot.pijvmpoc2.streams
 import akka.actor.ActorSystem
 import akka.stream.stage.{GraphStage, GraphStageLogic, OutHandler}
 import akka.stream.{Attributes, Outlet, SourceShape}
+import com.typesafe.scalalogging.LazyLogging
 import onextent.iot.pijvmpoc2.models._
 
 class CommandSource(pin: Int)(implicit system: ActorSystem)
-    extends GraphStage[SourceShape[(Int, Command)]] {
+    extends GraphStage[SourceShape[(Int, Command)]] with LazyLogging {
 
   val out: Outlet[(Int, Command)] = Outlet("CommandSource")
 
@@ -18,7 +19,10 @@ class CommandSource(pin: Int)(implicit system: ActorSystem)
       setHandler(
         out,
         new OutHandler {
-          override def onPull(): Unit = push(out, (pin, ReadCommand()))
+          override def onPull(): Unit = {
+            logger.debug(s"command source onPull")
+            push(out, (pin, ReadCommand()))
+          }
         }
       )
     }
