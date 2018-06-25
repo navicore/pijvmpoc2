@@ -143,7 +143,7 @@ object TempAndHumidityReporter2 extends LazyLogging {
       .map(measureDistance())
       .mapConcat(distReadings())
       .map(mqttReading)
-      .alsoTo(Sink.foreach(m => logger.debug(s"stream s3: ${m.payload.mkString}"))) // debug
+      .alsoTo(Sink.foreach(m => logger.debug(s"stream s3: ${new String(m.payload.toArray, "UTF8")}"))) // debug
       .to(toConsumer)
       .run()
 
