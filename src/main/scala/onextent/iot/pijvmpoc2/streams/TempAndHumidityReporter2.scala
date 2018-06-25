@@ -59,7 +59,7 @@ object TempAndHumidityReporter2 extends LazyLogging {
     def measureDistance() =
       (r: (Int, Command)) => (r._1, SR04Sensor())
 
-    def read() =
+    def readTemp() =
       (r: (Int, Command)) => (r._1, Dht22Sensor(r._1))
 
     def distReadings() =
@@ -110,10 +110,12 @@ object TempAndHumidityReporter2 extends LazyLogging {
       }
       //Source
       //  .fromGraph(s1)
-      .map(read())
+      .map(readTemp())
       .mapConcat(tempReadings)
       .map(mqttReading)
-      .runWith(toConsumer)
+      //.alsoTo(Sink.foreach(m => logger.debug(s"stream s1: ${m.payload}"))) // debug
+      .to(toConsumer)
+      .run()
 
     RestartSource
       .withBackoff(minBackoff = 1 second,
@@ -123,10 +125,12 @@ object TempAndHumidityReporter2 extends LazyLogging {
       }
       //Source
       //  .fromGraph(s2)
-      .map(read())
+      .map(readTemp())
       .mapConcat(tempReadings)
       .map(mqttReading)
-      .runWith(toConsumer)
+      //.alsoTo(Sink.foreach(m => logger.debug(s"stream s2: ${m.topic}"))) // debug
+      .to(toConsumer)
+      .run()
 
     RestartSource
       .withBackoff(minBackoff = 1 second,
@@ -139,7 +143,9 @@ object TempAndHumidityReporter2 extends LazyLogging {
       .map(measureDistance())
       .mapConcat(distReadings())
       .map(mqttReading)
-      .runWith(toConsumer)
+      .alsoTo(Sink.foreach(m => logger.debug(s"stream s3: ${m.payload.mkString}"))) // debug
+      .to(toConsumer)
+      .run()
 
   }
 

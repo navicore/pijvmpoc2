@@ -6,50 +6,79 @@ import onextent.iot.pijvmpoc2.models.UltraSonicReading
 
 object SR04Sensor extends LazyLogging {
 
+  val TIMEOUT: Int = 2100 * 10
+
   val gpio: GpioController = GpioFactory.getInstance()
 
-  val trigPin: Pin = RaspiBcmPin.GPIO_20
-  val sensorTriggerPin: GpioPinDigitalOutput = gpio.provisionDigitalOutputPin(trigPin)
+  val sensorTriggerPin: GpioPinDigitalOutput =
+    gpio.provisionDigitalOutputPin(RaspiBcmPin.GPIO_20,
+                                   "pin_trig",
+                                   PinState.HIGH)
 
-  val echoPin: Pin = RaspiBcmPin.GPIO_21
   val sensorEchoPin: GpioPinDigitalInput =
-    gpio.provisionDigitalInputPin(echoPin, PinPullResistance.PULL_DOWN)
+    gpio.provisionDigitalInputPin(RaspiBcmPin.GPIO_21,
+                                  PinPullResistance.PULL_DOWN)
+
+  def measure(f: () => Boolean): Long = {
+    val startTime = System.nanoTime
+    var countDown = TIMEOUT
+    while (f()) {
+      busyWaitNanos(1)
+      countDown = countDown - 1
+      if (countDown == 0) throw new Exception("timeout")
+    }
+    System.nanoTime - startTime
+  }
+
+  def busyWaitMicros(micros: Long): Unit = {
+    val waitUntil = System.nanoTime + (micros * 1000)
+    while ({
+      waitUntil > System.nanoTime
+    }) {}
+  }
+
+  def busyWaitNanos(nanos: Long): Unit = {
+    val waitUntil = System.nanoTime + nanos
+    while ({
+      waitUntil > System.nanoTime
+    }) {}
+  }
+
+  private def triggerSensor(): Unit = {
+    sensorTriggerPin.low()
+    busyWaitMicros(2)
+    sensorTriggerPin.high()
+    busyWaitMicros(10)
+    sensorTriggerPin.low()
+  }
 
   def apply(): Option[UltraSonicReading] = {
 
-    logger.debug(s"measure distance with sensor echo $echoPin and trig $trigPin")
+    logger.debug(s"measure distance with sensor ...")
 
     try {
-      sensorTriggerPin.high() // Make trigger pin HIGH
 
-      Thread.sleep(0.01.toLong) // Delay for 10 microseconds
+      triggerSensor()
 
-      sensorTriggerPin.low() //Make trigger pin LOW
-
-      logger.debug("ejs 1") // ejs this is the last log msg!!!!!!!!!!!!!!!!!!!!!!!
-      while ({
+      measure(() => {
         sensorEchoPin.isLow
-      }) {
-        //Wait until the ECHO pin gets HIGH
-      }
-      val startTime = System.nanoTime // Store the surrent time to calculate ECHO pin HIGH time.
-      logger.debug("ejs 2")
-      while ({
-        sensorEchoPin.isHigh
-      }) {
-        //Wait until the ECHO pin gets LOW
-      }
-      logger.debug("ejs 3")
-      val endTime = System.nanoTime // Store the echo pin HIGH end time to calculate ECHO pin HIGH time.
-      val result: Double = (((endTime - startTime) / 1e3) / 2) / 29.1
+      })
+      logger.debug("ejs 2 got startTime")
 
-      logger.debug(s"... distance by sensor echo $echoPin and trig $trigPin was $result")
+      val duration = measure(() => sensorEchoPin.isHigh)
+
+      logger.debug("ejs 3 got stopTime")
+
+      val result: Double = ((duration / 1e3) / 2) / 29.1
+
+      logger.debug(s"... distance by sensor was $result")
       Some(UltraSonicReading(Some(result)))
 
     } catch {
       //case e: InterruptedException =>
       case e: Throwable =>
-        logger.warn(s"$e", e)
+        //logger.warn(s"$e", e)
+        logger.warn(s"$e")
         None
     }
 
