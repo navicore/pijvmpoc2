@@ -1,5 +1,6 @@
 package onextent.iot.pijvmpoc2.streams
 
+import scala.concurrent.ExecutionContext.Implicits.global
 import akka.actor.ActorSystem
 import akka.stream._
 import akka.stream.alpakka.mqtt.scaladsl.MqttSink
@@ -19,6 +20,7 @@ import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence
 
 import scala.concurrent.Future
 import scala.concurrent.duration._
+import scala.util.{Failure, Success}
 
 /**
   * Akka Stream whose source is a temp and humidity module on a PI
@@ -28,12 +30,10 @@ object TempAndHumidityReporter2 extends LazyLogging {
 
   def createToConsumer(consumer: Sink[MqttMessage, Future[Done]])(
       implicit s: ActorSystem,
-      m: Materializer): Sink[MqttMessage, NotUsed] = {
-    val runnableGraph: RunnableGraph[Sink[MqttMessage, NotUsed]] =
+      m: Materializer): (Sink[MqttMessage, NotUsed], Future[Done]) = {
       MergeHub
         .source[MqttMessage](perProducerBufferSize = 16)
-        .to(consumer)
-    runnableGraph.run()
+        .toMat(consumer)(Keep.both).run
   }
 
   def throttlingFlow[T]: Flow[T, T, NotUsed] =
@@ -84,14 +84,6 @@ object TempAndHumidityReporter2 extends LazyLogging {
         }
       }
 
-    // read port 4 every n seconds
-    val s1 = Source.fromGraph(new CommandSource(4)).via(throttlingFlow)
-
-    // read temp port 4 when button is pressed
-    val s2 = Source.fromGraph(new ButtonSource(RaspiBcmPin.GPIO_02, 4))
-
-    val s3 = Source.fromGraph(new CommandSource(21)).via(throttlingFlow)
-
     val toConsumer = createToConsumer(
       MqttSink(sinkSettings, MqttQoS.atLeastOnce))
 
@@ -102,49 +94,62 @@ object TempAndHumidityReporter2 extends LazyLogging {
                     Some(MqttQoS.AtLeastOnce),
                     retained = true)
 
+    def handleTerminate(result: Future[Done]): Unit = {
+      result onComplete {
+        case Success(_) =>
+          logger.warn("success. but stream should not end!")
+          actorSystem.terminate()
+        case Failure(e) =>
+          logger.error(s"failure. stream should not end! $e", e)
+          actorSystem.terminate()
+      }
+    }
+
+    handleTerminate(toConsumer._2)
+
+    //
+    // begin streams
+    //
+
     RestartSource
       .withBackoff(minBackoff = 1 second,
                    maxBackoff = 10 seconds,
                    randomFactor = 0.2) { () =>
-        s1
+        // read port 4 every n seconds
+        Source.fromGraph(new CommandSource(4)).via(throttlingFlow)
       }
-      //Source
-      //  .fromGraph(s1)
       .map(readTemp())
       .mapConcat(tempReadings)
       .map(mqttReading)
-      //.alsoTo(Sink.foreach(m => logger.debug(s"stream s1: ${m.payload}"))) // debug
-      .to(toConsumer)
+      .to(toConsumer._1)
       .run()
 
     RestartSource
       .withBackoff(minBackoff = 1 second,
                    maxBackoff = 10 seconds,
                    randomFactor = 0.2) { () =>
-        s2
+        // read temp port 4 when button is pressed
+        Source.fromGraph(new ButtonSource(RaspiBcmPin.GPIO_02, 4))
       }
-      //Source
-      //  .fromGraph(s2)
       .map(readTemp())
       .mapConcat(tempReadings)
       .map(mqttReading)
-      //.alsoTo(Sink.foreach(m => logger.debug(s"stream s2: ${m.topic}"))) // debug
-      .to(toConsumer)
+      .to(toConsumer._1)
       .run()
 
     RestartSource
       .withBackoff(minBackoff = 1 second,
                    maxBackoff = 10 seconds,
                    randomFactor = 0.2) { () =>
-        s3
+        // read port 21 every n seconds
+        Source.fromGraph(new CommandSource(21)).via(throttlingFlow)
+
       }
-      //Source
-      //  .fromGraph(s3)
       .map(measureDistance())
       .mapConcat(distReadings())
       .map(mqttReading)
       .alsoTo(Sink.foreach(m => logger.debug(s"stream s3: ${new String(m.payload.toArray, "UTF8")}"))) // debug
-      .to(toConsumer)
+      .to(toConsumer._1)
       .run()
 
   }
